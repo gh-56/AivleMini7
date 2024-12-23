@@ -105,8 +105,6 @@ def summarize_text(client, input_text):
             "summary": summary_data.get("summary", "요약 없음"),
             "keywords": summary_data.get("keywords", [])
         }
-
-
     except json.JSONDecodeError:
         print(f"JSONDecodeError: 응답이 JSON 형식이 아님")
         return None
@@ -282,10 +280,11 @@ def save_hospital_info_by_language(result, text, base_filename=BASE_PATH + 'modu
     
     # 언어에 따라 파일명 결정
     filename = f"{base_filename}_{'en' if is_eng else 'kr'}.csv"
-    
     # CSV 저장
     df.to_csv(filename, index=False, encoding='utf-8-sig')
     print(f"병원 추천 결과가 {filename}에 저장되었습니다.")
+    return df
+    
 
 def recommend_hospital(text, user_lat, user_lon,top_n):
     # OpenAI 클라이언트 초기화
@@ -296,7 +295,6 @@ def recommend_hospital(text, user_lat, user_lon,top_n):
     
     # 응급 모델 로드
     tokenizer, model, device = load_emergency_model()
-    
     if not all([tokenizer, model, device]):
         return None
     
@@ -307,6 +305,7 @@ def recommend_hospital(text, user_lat, user_lon,top_n):
     
     if not summary_result:
         return None
+    
     
     # 응급도 예측
     predicted_class, probabilities = predict_emergency(summary_result["keywords"], tokenizer, model, device)
@@ -326,10 +325,9 @@ def recommend_hospital(text, user_lat, user_lon,top_n):
       save_hospital_info_by_language(result,text)
       return result
     else:
-    # 빈 DataFrame 대신 새로운 DataFrame 생성
-      ment = '응급상황이 아닙니다.'
-      df = pd.DataFrame({'상태': [ment]})
-      df.to_csv(BASE_PATH + 'module/hospital_recommendations.csv', index=False, encoding='utf-8-sig')
-      print("병원 추천이 필요없습니다.")
-    
+        return {
+            "summary": summary_result,
+            "emergency_class": predicted_class + 1,
+            "message": "응급상황이 아닙니다."
+        }
 
